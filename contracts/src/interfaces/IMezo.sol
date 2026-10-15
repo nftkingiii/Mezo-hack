@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.24;
+
+/// Minimal views of the MUSD contracts Vigil touches.
+/// Source of truth: https://github.com/mezo-org/musd (solidity/contracts).
+
+interface IERC20Min {
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address to, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+}
+
+interface IPriceFeed {
+    /// Reverts with "PriceFeed: Oracle is stale." when the oracle is older than 60 seconds.
+    function fetchPrice() external view returns (uint256);
+}
+
+interface ITroveManager {
+    function getCurrentICR(address borrower, uint256 price) external view returns (uint256);
+    function getTroveStatus(address borrower) external view returns (uint8);
+}
+
+interface IBorrowerOperationsSignatures {
+    /// Verifies an EIP-712 RepayMUSD(amount, borrower, nonce, deadline) signature from `borrower`,
+    /// then repays `amount` of the borrower's debt, burning the MUSD from msg.sender.
+    function repayMUSDWithSignature(
+        uint256 amount,
+        address upperHint,
+        address lowerHint,
+        address borrower,
+        bytes memory signature,
+        uint256 deadline
+    ) external;
+
+    function getNonce(address user) external view returns (uint256);
+}

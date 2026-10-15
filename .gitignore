@@ -1,0 +1,12 @@
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31611/dry-run/
+
+# Node
+node_modules/
+.env
+*.log
+
+# Local data
+bot/data/
