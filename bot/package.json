@@ -1,0 +1,29 @@
+{
+  "name": "vigil-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vigil: Telegram guardian and rescue keeper for MUSD borrowers on Mezo",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts",
+    "test": "node --test --import tsx test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "inspect": "tsx scripts/inspect.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.3",
+    "grammy": "1.46.0",
+    "hono": "4.13.11",
+    "https-proxy-agent": "9.1.0",
+    "tsx": "4.23.15",
+    "viem": "2.57.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "5.9.3"
+  }
+}

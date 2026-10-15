@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigil · MUSD rescue</title>
+<meta name="description" content="Pre-signed rescue for MUSD loans on Mezo. Keep a MUSD reserve, sign one capped repay, and Vigil submits it if your ratio drops below your trigger.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%23111827'/><path d='M5 16c3-6 7-9 11-9s8 3 11 9c-3 6-7 9-11 9s-8-3-11-9z' fill='none' stroke='%23F5A524' stroke-width='2.4'/><circle cx='16' cy='16' r='4' fill='%23F5A524'/></svg>">
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #121826; --panel-2: #182033; --line: #253049;
+    --text: #e8ecf4; --muted: #8b96ad; --accent: #f5a524; --accent-ink: #1a1203;
+    --ok: #34c77b; --watch: #f5c542; --danger: #ff8a3d; --bad: #ff5468;
+    --radius: 14px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7fb; --panel: #ffffff; --panel-2: #f0f2f8; --line: #dde2ee;
+    --text: #121826; --muted: #5b6680; --accent: #c77700; --accent-ink: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, Segoe UI, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; font-size: 18px; }
+  .brand small { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .net { font-size: 12px; color: var(--muted); border: 1px solid var(--line); padding: 4px 10px; border-radius: 99px; }
+  button, .btn { appearance: none; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 8px 0 20px; overflow-x: auto; }
+  .tabs [role="tab"] { background: none; color: var(--muted); border-radius: 0; padding: 10px 14px; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tabs [role="tab"][aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; }
+  .card p.sub { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel-2); border-radius: 10px; padding: 12px; }
+  .stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+  .stat .v { font-size: 20px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .h { color: var(--muted); font-size: 12px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+  .pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .pill.watch { background: color-mix(in srgb, var(--watch) 18%, transparent); color: var(--watch); }
+  .pill.danger { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+  .pill.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; }
+  input { width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; font-variant-numeric: tabular-nums; }
+  .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+  .row > * { flex: 1 1 180px; }
+  .row > button { flex: 0 0 auto; }
+  .mono { font-family: var(--mono); font-size: 13px; word-break: break-all; }
+  .muted { color: var(--muted); }
+  .log { font-family: var(--mono); font-size: 12.5px; background: var(--panel-2); border-radius: 10px; padding: 10px 12px; min-height: 40px; white-space: pre-wrap; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps li { counter-increment: s; padding-left: 34px; position: relative; margin-bottom: 10px; color: var(--muted); }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--panel-2); color: var(--text); font-size: 12px; display: grid; place-items: center; font-weight: 700; }
+  .steps li b { color: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+  @media (max-width: 560px) { .stat .v { font-size: 18px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#111827"/><path d="M5 16c3-6 7-9 11-9s8 3 11 9c-3 6-7 9-11 9s-8-3-11-9z" fill="none" stroke="#F5A524" stroke-width="2.4"/><circle cx="16" cy="16" r="4" fill="#F5A524"/></svg>
+      <div>Vigil <small>guard for MUSD loans</small></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="net" id="net">Mezo testnet</span>
+      <button id="connect">Connect wallet</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Vigil">
+    <button role="tab" id="tab-position" aria-controls="panel-position" aria-selected="true">Position</button>
+    <button role="tab" id="tab-reserve" aria-controls="panel-reserve" aria-selected="false" tabindex="-1">Reserve</button>
+    <button role="tab" id="tab-rescue" aria-controls="panel-rescue" aria-selected="false" tabindex="-1">Rescue</button>
+    <button role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">Log</button>
+  </div>
+
+  <!-- POSITION -->
+  <section role="tabpanel" id="panel-position" aria-labelledby="tab-position">
+    <div class="card">
+      <div class="row">
+        <div><label for="addr">Mezo address</label><input id="addr" placeholder="0x…" autocomplete="off" spellcheck="false"></div>
+        <button id="load" class="ghost">Check</button>
+      </div>
+    </div>
+    <div class="card" id="pos-empty"><p class="muted" style="margin:0">Enter an address or connect your wallet to see the loan the way Vigil sees it.</p></div>
+    <div id="pos" hidden>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <h2>Loan health</h2><span id="pos-level" class="pill ok">Healthy</span>
+        </div>
+        <p class="sub" id="pos-sub"></p>
+        <div class="grid">
+          <div class="stat"><div class="k">Collateral ratio</div><div class="v" id="s-icr">–</div><div class="h">liquidation at 110%</div></div>
+          <div class="stat"><div class="k">Liquidation price</div><div class="v" id="s-liq">–</div><div class="h" id="s-drop">–</div></div>
+          <div class="stat"><div class="k">Redemption queue</div><div class="v" id="s-rank">–</div><div class="h" id="s-buffer">–</div></div>
+          <div class="stat"><div class="k">Interest drift</div><div class="v" id="s-days">–</div><div class="h">days to 110% at a flat price</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Your Vigil setup</h2>
+        <div class="grid" style="margin-top:10px">
+          <div class="stat"><div class="k">Reserve</div><div class="v" id="s-reserve">–</div><div class="h" id="s-wallet">–</div></div>
+          <div class="stat"><div class="k">Trigger</div><div class="v" id="s-trigger">–</div><div class="h">rescue runs below this</div></div>
+          <div class="stat"><div class="k">Rescue</div><div class="v" id="s-rescue">–</div><div class="h" id="s-rescue-h">–</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESERVE -->
+  <section role="tabpanel" id="panel-reserve" aria-labelledby="tab-reserve" hidden>
+    <div class="card">
+      <h2>MUSD reserve</h2>
+      <p class="sub">The reserve sits in the Vigil contract under your address. Only a rescue you signed can spend it, and you can withdraw it at any time.</p>
+      <div class="row">
+        <div><label for="dep">Deposit MUSD</label><input id="dep" inputmode="decimal" placeholder="e.g. 500"></div>
+        <button id="deposit">Approve &amp; deposit</button>
+      </div>
+      <div class="row">
+        <div><label for="wd">Withdraw MUSD</label><input id="wd" inputmode="decimal" placeholder="e.g. 100"></div>
+        <button id="withdraw" class="ghost">Withdraw</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Trigger</h2>
+      <p class="sub">A rescue can only run while your collateral ratio is below this line, checked on-chain at a fresh Mezo price. It must be above 110%.</p>
+      <div class="row">
+        <div><label for="trg">Trigger ratio (%)</label><input id="trg" inputmode="decimal" placeholder="e.g. 130"></div>
+        <button id="settrigger">Set trigger</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESCUE -->
+  <section role="tabpanel" id="panel-rescue" aria-labelledby="tab-rescue" hidden>
+    <div class="card">
+      <h2>Sign a rescue</h2>
+      <p class="sub">You sign Mezo's own <span class="mono">RepayMUSD</span> message. Mezo checks the signature, so Vigil can't change the amount, the loan or the deadline. If you sign any other Mezo action later, this rescue becomes void.</p>
+      <ol class="steps">
+        <li><b>Reserve</b> must cover the amount.</li>
+        <li><b>Trigger</b> must be set.</li>
+        <li><b>Sign</b> below. Vigil stores the signature and submits it only below your trigger.</li>
+      </ol>
+      <div class="row">
+        <div><label for="amt">Repay amount (MUSD)</label><input id="amt" inputmode="decimal" placeholder="e.g. 300"></div>
+        <div><label for="days">Valid for (days)</label><input id="days" inputmode="numeric" value="7"></div>
+        <button id="sign">Sign rescue</button>
+      </div>
+      <p class="muted" id="hint" style="margin:10px 0 0;font-size:13px"></p>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
+    <div class="card">
+      <h2>Rescue log</h2>
+      <p class="sub">Every rescue Vigil has stored or submitted. Executed rescues link to the transaction.</p>
+      <table><thead><tr><th>#</th><th>Borrower</th><th>Amount</th><th>Status</th><th>Tx / detail</th></tr></thead><tbody id="log-body"></tbody></table>
+    </div>
+  </section>
+
+  <div class="card">
+    <div class="log" id="out" aria-live="polite">Ready.</div>
+  </div>
+  <p class="muted" style="font-size:13px">Alerts in Telegram: <a id="tg" href="https://t.me/VigilMezoBot" target="_blank" rel="noopener">@VigilMezoBot</a> · Contract <a id="contract" target="_blank" rel="noopener"></a> · Mezo testnet only</p>
+</div>
+
+<script>
+const CFG = __VIGIL_CONFIG__;
+const $ = (id) => document.getElementById(id);
+const WAD = 10n ** 18n;
+let account = null;
+let current = null;
+
+$("contract").href = `${CFG.explorer}/address/${CFG.vigilReserve}`;
+$("contract").textContent = CFG.vigilReserve.slice(0, 6) + "…" + CFG.vigilReserve.slice(-4);
+
+// ---------- tabs (WAI-ARIA tabs pattern)
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function selectTab(tab) {
+  for (const t of tabs) {
+    const on = t === tab;
+    t.setAttribute("aria-selected", on);
+    t.tabIndex = on ? 0 : -1;
+    $(t.getAttribute("aria-controls")).hidden = !on;
+  }
+  if (tab.id === "tab-log") loadLog();
+}
+tabs.forEach((t, i) => {
+  t.addEventListener("click", () => selectTab(t));
+  t.addEventListener("keydown", (e) => {
+    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; selectTab(n); n.focus(); }
+  });
+});
+
+// ---------- formatting
+const log = (msg) => { $("out").textContent = msg; };
+const fmt = (wei, dp = 2) => (Number(BigInt(wei) / 10n ** 14n) / 1e4).toLocaleString("en-US", { maximumFractionDigits: dp });
+const pct = (wei, dp = 1) => (Number(BigInt(wei) * 10000n / WAD) / 100).toFixed(dp) + "%";
+function toWei(s) {
+  const m = /^\s*(\d+)(?:\.(\d{0,18}))?\s*$/.exec(s || "");
+  if (!m) throw new Error("Enter a number, e.g. 250 or 250.5");
+  return BigInt(m[1]) * WAD + BigInt((m[2] || "").padEnd(18, "0"));
+}
+const word = (hex) => hex.replace(/^0x/, "").padStart(64, "0");
+const uint = (n) => word(BigInt(n).toString(16));
+const addr = (a) => word(a.toLowerCase());
+
+// ---------- wallet
+function eth() {
+  if (!window.ethereum) throw new Error("No wallet found. Open this page in a browser with MetaMask, Rabby or another EVM wallet.");
+  return window.ethereum;
+}
+async function ensureChain() {
+  const hex = "0x" + CFG.chainId.toString(16);
+  const now = await eth().request({ method: "eth_chainId" });
+  if (now === hex) return;
+  try {
+    await eth().request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
+  } catch (e) {
+    if (e.code !== 4902) throw e;
+    await eth().request({ method: "wallet_addEthereumChain", params: [{
+      chainId: hex, chainName: CFG.chainName, rpcUrls: [CFG.rpcUrl],
+      nativeCurrency: { name: "Bitcoin", symbol: "BTC", decimals: 18 }, blockExplorerUrls: [CFG.explorer],
+    }] });
+  }
+}
+async function connect() {
+  const [a] = await eth().request({ method: "eth_requestAccounts" });
+  account = a;
+  await ensureChain();
+  $("connect").textContent = a.slice(0, 6) + "…" + a.slice(-4);
+  $("addr").value = a;
+  await load(a);
+}
+async function send(to, data, label) {
+  if (!account) await connect();
+  await ensureChain();
+  log(`${label}: confirm in your wallet…`);
+  const hash = await eth().request({ method: "eth_sendTransaction", params: [{ from: account, to, data }] });
+  log(`${label}: sent ${hash}\nWaiting for confirmation…`);
+  for (let i = 0; i < 90; i++) {
+    const r = await eth().request({ method: "eth_getTransactionReceipt", params: [hash] });
+    if (r) {
+      if (r.status !== "0x1") throw new Error(`${label} reverted: ${CFG.explorer}/tx/${hash}`);
+      log(`${label}: confirmed ✓\n${CFG.explorer}/tx/${hash}`);
+      return hash;
+    }
+    await new Promise((res) => setTimeout(res, 2000));
+  }
+  throw new Error(`${label}: not confirmed after 3 minutes. Check ${CFG.explorer}/tx/${hash}`);
+}
+
+// ---------- data
+async function load(a) {
+  const target = (a || $("addr").value).trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(target)) { log("Enter a valid 0x address."); return; }
+  log("Loading…");
+  const r = await fetch(`/api/position/${target}`);
+  const d = await r.json();
+  if (!r.ok) { log(d.error || "Failed to load"); return; }
+  current = d;
+  $("pos-empty").hidden = true; $("pos").hidden = false;
+  const p = d.position;
+  if (d.price && d.price.ok === false) {
+    setLevel("watch", "Price feed paused");
+    $("pos-sub").textContent = `Mezo's price feed is unavailable (${d.price.reason}). Vigil won't act on a guessed price.`;
+  } else if (!p) {
+    setLevel("watch", "No active loan");
+    $("pos-sub").textContent = "No active MUSD loan for this address on Mezo testnet. Open one at testnet.mezo.org.";
+    for (const id of ["s-icr", "s-liq", "s-rank", "s-days"]) $(id).textContent = "–";
+    $("s-drop").textContent = $("s-buffer").textContent = "";
+  } else {
+    const icr = BigInt(p.icr);
+    const trig = BigInt(d.trigger);
+    const lvl = icr < 11n * 10n ** 17n ? ["bad", "Liquidatable"] : trig && icr < trig ? ["danger", "Below trigger"] : icr < 15n * 10n ** 17n ? ["watch", "Thin margin"] : ["ok", "Healthy"];
+    setLevel(...lvl);
+    $("pos-sub").textContent = `${fmt(p.coll, 6)} BTC collateral · ${fmt(p.debt)} MUSD debt · BTC $${fmt(d.price.value, 0)}`;
+    $("s-icr").textContent = pct(p.icr, 2);
+    $("s-liq").textContent = "$" + fmt(p.liquidationPrice, 0);
+    $("s-drop").textContent = `${pct(p.dropToLiquidation)} below today's price`;
+    $("s-rank").textContent = p.redemptionRank ? `#${p.redemptionRank} of ${p.redeemableTroves}` : "not redeemable";
+    $("s-buffer").textContent = p.redemptionRank ? `${fmt(p.redemptionBuffer, 0)} MUSD redeemed before yours` : "under 110%";
+    $("s-days").textContent = p.daysToMcrFlat == null ? "–" : Math.round(p.daysToMcrFlat).toLocaleString("en-US");
+    if (d.maxRepay) $("hint").textContent = `Largest repay Mezo allows for this loan: ${fmt(d.maxRepay, 0)} MUSD (net debt can't go under 1,800).` + (d.repayTo150 && BigInt(d.repayTo150) > 0n ? ` About ${fmt(d.repayTo150, 0)} MUSD would lift it to 150% today.` : "");
+  }
+  $("s-reserve").textContent = fmt(d.reserve) + " MUSD";
+  $("s-wallet").textContent = `wallet holds ${fmt(d.musdBalance)} MUSD`;
+  $("s-trigger").textContent = BigInt(d.trigger) ? pct(d.trigger, 1) : "off";
+  const lr = d.latestRescue;
+  $("s-rescue").textContent = lr ? lr.status : "none";
+  $("s-rescue-h").textContent = lr ? `${fmt(lr.amount, 0)} MUSD · nonce ${lr.nonce}${lr.status === "armed" ? " · until " + new Date(lr.deadline * 1000).toLocaleDateString() : ""}` : "sign one in the Rescue tab";
+  log(`Loaded ${target}.`);
+}
+function setLevel(cls, text) { const el = $("pos-level"); el.className = "pill " + cls; el.textContent = text; }
+
+async function loadLog() {
+  const rows = await (await fetch("/api/rescues")).json();
+  $("log-body").innerHTML = rows.length ? "" : `<tr><td colspan="5" class="muted">No rescues yet.</td></tr>`;
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    const tx = r.txHash ? `<a href="${CFG.explorer}/tx/${r.txHash}" target="_blank" rel="noopener">${r.txHash.slice(0, 10)}…</a>` : (r.detail || "");
+    tr.innerHTML = `<td>${r.id}</td><td class="mono">${r.borrower.slice(0, 6)}…${r.borrower.slice(-4)}</td><td>${fmt(r.amount, 0)}</td><td>${r.status}</td><td></td>`;
+    tr.lastElementChild.innerHTML = tx.startsWith("<a") ? tx : "";
+    if (!tx.startsWith("<a")) tr.lastElementChild.textContent = tx;
+    $("log-body").appendChild(tr);
+  }
+}
+
+// ---------- actions
+async function guarded(fn) {
+  try { await fn(); } catch (e) { log("⚠️ " + (e?.message || e)); }
+}
+$("connect").onclick = () => guarded(connect);
+$("load").onclick = () => guarded(() => load());
+$("deposit").onclick = () => guarded(async () => {
+  const amt = toWei($("dep").value);
+  if (!account) await connect();
+  await send(CFG.musd, CFG.selectors.approve + addr(CFG.vigilReserve) + uint(amt), "Approve MUSD");
+  await send(CFG.vigilReserve, CFG.selectors.deposit + addr(account) + uint(amt), "Deposit");
+  await load(account);
+});
+$("withdraw").onclick = () => guarded(async () => {
+  const amt = toWei($("wd").value);
+  if (!account) await connect();
+  await send(CFG.vigilReserve, CFG.selectors.withdraw + uint(amt) + addr(account), "Withdraw");
+  await load(account);
+});
+$("settrigger").onclick = () => guarded(async () => {
+  const v = Number($("trg").value);
+  if (!(v > 110 && v <= 500)) throw new Error("Trigger must be above 110% and at most 500%.");
+  const wei = BigInt(Math.round(v * 100)) * WAD / 10000n;
+  await send(CFG.vigilReserve, CFG.selectors.setTrigger + uint(wei), "Set trigger");
+  await load(account);
+});
+$("sign").onclick = () => guarded(async () => {
+  if (!account) await connect();
+  await ensureChain();
+  const amount = toWei($("amt").value);
+  const days = Math.min(30, Math.max(1, Number($("days").value) || 7));
+  await load(account);
+  if (!current) throw new Error("Couldn't load your position.");
+  const deadline = Math.floor(Date.now() / 1000) + days * 86400;
+  const message = { amount: amount.toString(), borrower: account, nonce: String(current.nonce), deadline: String(deadline) };
+  const typed = {
+    domain: CFG.typedData.domain,
+    primaryType: "RepayMUSD",
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" }, { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" },
+      ],
+      ...CFG.typedData.types,
+    },
+    message,
+  };
+  log("Sign the RepayMUSD message in your wallet…");
+  const signature = await eth().request({ method: "eth_signTypedData_v4", params: [account, JSON.stringify(typed)] });
+  const r = await fetch("/api/rescue", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...message, signature }) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "Vigil rejected the signature");
+  log(`Rescue armed ✓ (#${d.id})\nUp to ${fmt(amount)} MUSD will be repaid from your reserve if your ratio drops below your trigger, until ${new Date(deadline * 1000).toLocaleString()}.`);
+  await load(account);
+});
+
+const q = new URLSearchParams(location.search).get("borrower");
+if (q) { $("addr").value = q; guarded(() => load(q)); }
+if (window.ethereum) window.ethereum.on?.("accountsChanged", (a) => { account = a[0] || null; if (account) guarded(() => load(account)); });
+</script>
+</body>
+</html>
