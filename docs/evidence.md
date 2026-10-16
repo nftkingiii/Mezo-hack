@@ -48,7 +48,7 @@ Read back with `cast call` after the deploy:
 |---|---|
 | App and API | https://vigil-mezo.up.railway.app |
 | Health | https://vigil-mezo.up.railway.app/health |
-| Revision served on 2026-10-16 | `f49ba95` (matches the pushed commit) |
+| Revision served on 2026-10-16 | `d83ab05` (matches the pushed commit; history was later rewritten to fix authorship, originally `f49ba95`) |
 | Keeper (gas only, key generated inside the service) | [`0xBE8c12D0…3934`](https://explorer.test.mezo.org/address/0xBE8c12D0546430A371d3dE375958574393113934) |
 | Telegram | [@VigilMezoBot](https://t.me/VigilMezoBot) |
 
