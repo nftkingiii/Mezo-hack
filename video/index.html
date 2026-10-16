@@ -236,13 +236,13 @@ const SHOTS = [
         { name: 'rejB', t: at('l12', 's07', 4.6), title: 'Invalid signature', sub: 'Mezo itself: amount changed after signing' },
       ];
       items.forEach((it, i) => {
-        const k = pop(lt, it.t), x = 120 + i * 850, y = 170 + (1 - k) * 60;
-        g.save(); g.globalAlpha = clamp(k * 1.6);
+        const kc = pop(lt, 0.35 + i * 0.25), k = pop(lt, it.t), x = 120 + i * 850, y = 170 + (1 - kc) * 60;   // cards in early, verdicts on the narration
+        g.save(); g.globalAlpha = clamp(kc * 1.6) * (lt < it.t ? 0.55 : 1);
         const v = camera(it.name, .33, .48, 2.3, x, y, 810, 480, 18);
-        ring(v, .265, .445, .305, .475, pop(lt, it.t + 0.6, SPRINGS.snappy));
         g.restore();
-        text(it.title, x, y + 560, 44, { font: F.mono, weight: 700, color: C.amber, alpha: clamp(k * 1.6) });
-        text(it.sub, x, y + 610, 28, { color: C.mute, alpha: clamp(k * 1.6) });
+        ring(v, .265, .445, .305, .475, pop(lt, it.t + 0.2, SPRINGS.snappy));
+        text(it.title, x, y + 560 + (1 - k) * 16, 44, { font: F.mono, weight: 700, color: C.amber, alpha: clamp(k * 1.6) });
+        text(it.sub, x, y + 610 + (1 - k) * 16, 28, { color: C.mute, alpha: clamp(k * 1.6) });
       });
       source('Revert reasons replayed with eth_call at the block before each tx · docs/evidence.md', pop(lt, items[1].t + 1));
     } },

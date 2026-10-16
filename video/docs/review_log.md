@@ -22,3 +22,8 @@ Fixes: camera close-up by scaling the whole phone (every line stays full width);
 Scores 8 · 8 · 8 · 8 · 8 · pass · 8 (cues derived from the timeline).
 The hook opens on the real alert card; rings follow the narration one at a time; transitions are clean frame to frame.
 `--verify` deterministic across 12 hand-off times.
+
+## Round 4 (encoded master)
+- **Dead stretch:** s07 opened on an empty screen for about 2 s. Fixed: both explorer cards enter at once, dimmed, and each verdict lands on its narration line. Re-rendered that range only.
+- **Master:** 99.60 s, 1920×1080, 30 fps, H.264 + AAC; −16.2 LUFS integrated, −1.4 dBTP true peak. Phone sheet readable.
+- **Known look:** the push transitions show about 6 frames of 3-subframe motion blur (stepped smear) at full speed. Accepted.
