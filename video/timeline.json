@@ -1,0 +1,141 @@
+{
+ "dur": 99.554,
+ "shots": {
+  "s01": {
+   "from": 0.0,
+   "to": 6.684
+  },
+  "s02": {
+   "from": 6.684,
+   "to": 21.895
+  },
+  "s03": {
+   "from": 21.895,
+   "to": 35.369
+  },
+  "s04": {
+   "from": 35.369,
+   "to": 43.869
+  },
+  "s05": {
+   "from": 43.869,
+   "to": 57.961
+  },
+  "s06": {
+   "from": 57.961,
+   "to": 72.523
+  },
+  "s07": {
+   "from": 72.523,
+   "to": 83.523
+  },
+  "s08": {
+   "from": 83.523,
+   "to": 92.023
+  },
+  "s09": {
+   "from": 92.023,
+   "to": 99.554
+  }
+ },
+ "lines": [
+  {
+   "id": "l01",
+   "shot": "s01",
+   "from": 0.6,
+   "to": 5.784,
+   "caption": "Vigil, warning a borrower: their MUSD loan just slipped below its alert line."
+  },
+  {
+   "id": "l02",
+   "shot": "s02",
+   "from": 6.684,
+   "to": 9.415,
+   "caption": "On Mezo, there are two ways to lose your Bitcoin."
+  },
+  {
+   "id": "l03",
+   "shot": "s02",
+   "from": 9.765,
+   "to": 12.581,
+   "caption": "Liquidation, below 110%."
+  },
+  {
+   "id": "l04",
+   "shot": "s02",
+   "from": 12.931,
+   "to": 20.995,
+   "caption": "And redemption: Mezo takes BTC from the lowest-ratio loans first, even healthy ones. Most borrowers never see it coming."
+  },
+  {
+   "id": "l05",
+   "shot": "s03",
+   "from": 21.895,
+   "to": 24.775,
+   "caption": "Vigil watches both. Send it your Mezo address."
+  },
+  {
+   "id": "l06",
+   "shot": "s03",
+   "from": 25.125,
+   "to": 34.469,
+   "caption": "Every minute it reads every loan on Mezo: your liquidation price, your place in the redemption queue, and how long interest alone takes to hurt you."
+  },
+  {
+   "id": "l07",
+   "shot": "s04",
+   "from": 35.369,
+   "to": 40.702,
+   "caption": "The same view on the web: a real loan on Mezo testnet, read live."
+  },
+  {
+   "id": "l08",
+   "shot": "s05",
+   "from": 43.869,
+   "to": 50.909,
+   "caption": "For the bad night, set up a rescue: keep a MUSD reserve, pick a trigger, and sign Mezo's own repay message once."
+  },
+  {
+   "id": "l09",
+   "shot": "s05",
+   "from": 51.259,
+   "to": 57.061,
+   "caption": "Mezo checks that signature itself, so Vigil can't change the amount, the loan or the deadline."
+  },
+  {
+   "id": "l10",
+   "shot": "s06",
+   "from": 57.961,
+   "to": 64.169,
+   "caption": "On-chain: when this test loan crossed its trigger, Vigil's keeper submitted the rescue on its own."
+  },
+  {
+   "id": "l11",
+   "shot": "s06",
+   "from": 64.519,
+   "to": 71.623,
+   "caption": "300 MUSD repaid from the reserve. Ratio 130.9% \u2192 148.8%."
+  },
+  {
+   "id": "l12",
+   "shot": "s07",
+   "from": 72.523,
+   "to": 81.334,
+   "caption": "It refuses what it should: a rescue above the trigger, and a signature with a changed amount, which Mezo rejects itself."
+  },
+  {
+   "id": "l13",
+   "shot": "s08",
+   "from": 83.523,
+   "to": 90.371,
+   "caption": "No owner. Verified source. 12 fork tests against Mezo's real contracts."
+  },
+  {
+   "id": "l14",
+   "shot": "s09",
+   "from": 92.023,
+   "to": 96.354,
+   "caption": "Vigil: a guard for MUSD loans on Mezo. Try it on Telegram today."
+  }
+ ]
+}

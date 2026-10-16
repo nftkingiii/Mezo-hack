@@ -2,3 +2,6 @@ node_modules/
 out/
 .env
 assets/capture/flow/
+assets/telegram/seq/
+assets/telegram/recording.mp4
+audio/vo/

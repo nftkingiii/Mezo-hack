@@ -1,34 +1,33 @@
 <!doctype html>
-<!-- A seek(t) film. Every frame is a pure function of t: no CSS transitions, no timers, no state between frames,
-     no Math.random. Scrub it live in a browser (auto-plays, click to pause, arrow keys step); render with scripts/render.mjs. -->
-<html><head><meta charset="utf-8"><title>film</title>
+<!-- Vigil demo film. A seek(t) film: every frame is a pure function of t. No CSS transitions, no timers, no state
+     between frames, no Math.random. Shots are timed to the Kokoro narration (timeline.js, written by tts.py).
+     Every product pixel is a real capture: assets/app (live app), assets/explorer (Mezo testnet explorer),
+     assets/telegram (the user's phone recording of @VigilMezoBot). Sources for every number: BRIEF.md. -->
+<html><head><meta charset="utf-8"><title>Vigil demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;600;700&display=block" rel="stylesheet">
-<style>html,body{margin:0;background:#111}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#05070B}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style>
 </head><body>
 <canvas id="c"></canvas>
 <script src="lib/motion.js"></script>
+<script src="timeline.js"></script>
 <script>
-// ---- Film settings. ?w=1080&h=1920 reframes the same timeline to vertical (layout() below does the work).
 const Q = new URLSearchParams(location.search);
 const W = +(Q.get('w') || 1920), H = +(Q.get('h') || 1080);
-window.FILM = { w: W, h: H, dur: 120, fps: 30 };
-const BEAT = { bpm: 120, offset: 0 };            // replace with beats.json { bpm, offset } once the track is measured
+const TL = window.TIMELINE;
+window.FILM = { w: W, h: H, dur: TL.dur, fps: 30 };
 const L = layout(W, H), u = L.u;
 
-// ---- Look. Replace from assets/capture/brand.json (real colors + fonts). One accent unless the brief says otherwise.
-const C = { bg: '#F4F0EA', ink: '#1E1B24', mute: '#8A8494', accent: '#8B7FD1', panel: '#FFFFFF' };
-// Every number on screen needs a source (a tx hash, a benchmark log, a live dashboard). Placeholders render in red.
-const STAT = { value: 42, label: 'seconds from brief to first render', source: 'PLACEHOLDER' };
-const F = { display: '"Instrument Serif", Georgia, serif', ui: 'Inter, system-ui, sans-serif' };
+// ---- Look: Vigil's brand (brand/, bot/src/web/app.html)
+const C = { bg: '#0B0F17', panel: '#121826', line: '#253049', amber: '#F5A524', light: '#F4F1EA', text: '#E8ECF4', mute: '#A9B3C7', dim: '#6B7895', ink: '#14213D' };
+const F = { display: '"Space Grotesk", Arial, sans-serif', ui: '"IBM Plex Sans", Arial, sans-serif', mono: '"JetBrains Mono", monospace' };
 
 const cv = document.getElementById('c'); cv.width = W; cv.height = H;
 const g = cv.getContext('2d');
 
-// ---- Assets. Real captures only (scripts/capture.mjs). A missing asset renders as a loud MISSING box, never a fake UI.
+// ---- Assets (real captures only; a missing one renders as a red MISSING box)
 const IMG = {};
 function img(name, src) { const i = new Image(); i.src = src; IMG[name] = i; return i.decode().catch(() => { IMG[name] = null; console.warn('missing asset: ' + src); }); }
-// Image sequence from a recorded flow (assets/capture/flow/%05d.jpg): seek awaits the decode of the frame it needs.
 const SEQ = {};
 function seq(name, dir, fps, frames) { SEQ[name] = { dir, fps, frames, cache: new Map() }; }
 async function seqFrame(name, t) {
@@ -37,99 +36,274 @@ async function seqFrame(name, t) {
   if (!s.cache.has(key)) { const i = new Image(); i.src = `${s.dir}/${key}.jpg`; s.cache.set(key, i.decode().then(() => i, () => null)); if (s.cache.size > 90) s.cache.delete(s.cache.keys().next().value); }
   return s.cache.get(key);
 }
+seq('tg', 'assets/telegram/seq', 30, 552);          // 720x1624 phone recording, 18.4 s
 window.ready = Promise.all([
-  // canvas never triggers a font download until first use: load every face/weight the film draws, up front
-  document.fonts.load(`400 100px ${F.display}`), document.fonts.load(`400 100px ${F.ui}`),
-  document.fonts.load(`600 100px ${F.ui}`), document.fonts.load(`700 100px ${F.ui}`),
-  // vertical films use the phone capture (capture.mjs --sizes=1920x1080,390x844)
-  img('screen', L.portrait ? 'assets/capture/screen-390x844.png' : 'assets/capture/screen-1920x1080.png'),
-  // img('logo', 'assets/logo.svg'),
+  ...['500 100px', '700 100px'].map(w => document.fonts.load(`${w} ${F.display}`)),
+  ...['400 100px', '500 100px', '600 100px'].map(w => document.fonts.load(`${w} ${F.ui}`)),
+  ...['500 100px', '700 100px'].map(w => document.fonts.load(`${w} ${F.mono}`)),
+  img('position', 'assets/app/position.png'), img('reserve', 'assets/app/reserve.png'), img('rescue', 'assets/app/rescue.png'),
+  img('rtx', 'assets/explorer/rescue-tx/full-1920x1080.png'), img('rejA', 'assets/explorer/reject-above/screen-1920x1080.png'),
+  img('rejB', 'assets/explorer/reject-tamper/screen-1920x1080.png'), img('contract', 'assets/explorer/contract/screen-1920x1080.png'),
 ]);
-// seq('flow', 'assets/capture/flow', 30, 240);
 
-// ---- Drawing helpers
+// ---- Helpers
+const shot = id => TL.shots[id];
+const line = id => TL.lines.find(l => l.id === id);
+const at = (id, sid, plus = 0) => line(id).from - shot(sid).from + plus;     // local time of a narration line in its shot
 function text(str, x, y, size, o = {}) {
-  g.save(); g.font = `${o.weight || 400} ${size}px ${o.font || F.display}`; g.fillStyle = o.color || C.ink;
-  g.textAlign = o.align || 'center'; g.textBaseline = 'middle'; g.globalAlpha *= o.alpha ?? 1;
+  g.save(); g.font = `${o.weight || 500} ${size}px ${o.font || F.ui}`; g.fillStyle = o.color || C.text;
+  g.textAlign = o.align || 'left'; g.textBaseline = o.base || 'alphabetic'; g.globalAlpha *= o.alpha ?? 1;
   if (o.track) g.letterSpacing = o.track + 'px';
   g.fillText(str, x, y); g.restore();
 }
+function wrap(str, maxW, size, font, weight) {
+  g.save(); g.font = `${weight} ${size}px ${font}`; const words = str.split(' '), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur); g.restore(); return lines;
+}
 function rrect(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
-function picture(name, x, y, w, h, r = 18 * u) {
-  const i = IMG[name];
-  g.save(); rrect(x, y, w, h, r); g.clip();
-  if (i) g.drawImage(i, x, y, w, h);
-  else { g.fillStyle = '#FF3B30'; g.fillRect(x, y, w, h); text('MISSING ASSET: ' + name, x + w / 2, y + h / 2, 36 * u, { font: F.ui, weight: 700, color: '#fff' }); }
+// Draw the source rect (fractions of the image) into a destination rect
+function crop(name, fx, fy, fw, fh, x, y, w, h, r = 0) {
+  const i = IMG[name]; g.save(); if (r) { rrect(x, y, w, h, r); g.clip(); }
+  if (i) g.drawImage(i, fx * i.naturalWidth, fy * i.naturalHeight, fw * i.naturalWidth, fh * i.naturalHeight, x, y, w, h);
+  else { g.fillStyle = '#FF3B30'; g.fillRect(x, y, w, h); text('MISSING ASSET: ' + name, x + 20, y + 60, 36, { weight: 700, color: '#fff' }); }
   g.restore();
 }
-function cursor(x, y, press = 0) {          // press 0..1 squashes the pointer on click
-  g.save(); g.translate(x, y); g.scale(1 - .15 * press, 1 - .15 * press);
-  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 34 * u); g.lineTo(9 * u, 26 * u); g.lineTo(16 * u, 40 * u); g.lineTo(22 * u, 37 * u); g.lineTo(15 * u, 24 * u); g.lineTo(26 * u, 24 * u); g.closePath();
-  g.fillStyle = C.ink; g.strokeStyle = '#fff'; g.lineWidth = 2.5 * u; g.fill(); g.stroke(); g.restore();
+// A camera over an image: show the window centred on (fx, fy) at zoom z (1 = whole width fits w) inside dest rect
+function camera(name, fx, fy, z, x, y, w, h, r = 22) {
+  const i = IMG[name]; if (!i) return crop(name, 0, 0, 1, 1, x, y, w, h, r);
+  const aspect = (h / w) * (i.naturalWidth / i.naturalHeight);    // fraction of image height that fits at z = 1
+  const fw = 1 / z, fh = Math.min(1, aspect / z);
+  const sx = clamp(fx - fw / 2, 0, 1 - fw), sy = clamp(fy - fh / 2, 0, 1 - fh);
+  crop(name, sx, sy, fw, fh, x, y, w, h, r);
+  return { sx, sy, fw, fh, x, y, w, h };       // to map image fractions to screen for highlights
+}
+const toScreen = (v, fx, fy) => [v.x + (fx - v.sx) / v.fw * v.w, v.y + (fy - v.sy) / v.fh * v.h];
+function ring(v, fx0, fy0, fx1, fy1, k, color = C.amber) {      // highlight a region of a camera view; k 0..1 draws it on
+  if (k <= 0) return; const [x0, y0] = toScreen(v, fx0, fy0), [x1, y1] = toScreen(v, fx1, fy1), p = 10;
+  g.save(); g.beginPath(); g.rect(v.x - 6, v.y - 6, v.w + 12, v.h + 12); g.clip(); g.strokeStyle = color; g.lineWidth = 5; g.globalAlpha = clamp(k * 1.4);
+  rrect(x0 - p, y0 - p, (x1 - x0 + 2 * p) * (0.6 + 0.4 * easeOut(k)), y1 - y0 + 2 * p, 12); g.stroke(); g.restore();
+}
+function kicker(str, x, y, k = 1) { text(str.toUpperCase(), x, y + (1 - k) * 18, 24, { font: F.ui, weight: 600, color: C.amber, track: 3, alpha: clamp(k * 1.5) }); }
+function heading(str, x, y, size, k = 1, color = C.text, maxW = 900) {
+  wrap(str, maxW, size, F.display, 700).forEach((ln, i) => text(ln, x, y + i * size * 1.12 + (1 - k) * 30, size, { font: F.display, weight: 700, color, alpha: clamp(k * 1.4) }));
+}
+function pill(str, x, y, size, o = {}) {
+  g.save(); g.font = `${o.weight || 600} ${size}px ${o.font || F.ui}`; const w = g.measureText(str).width + size * 1.4, h = size * 1.9;
+  g.globalAlpha *= o.alpha ?? 1; g.fillStyle = o.bg || C.amber; rrect(o.align === 'center' ? x - w / 2 : x, y, w, h, h / 2); g.fill(); g.restore();
+  text(str, (o.align === 'center' ? x - w / 2 : x) + size * 0.7, y + h * 0.66, size, { font: o.font || F.ui, weight: o.weight || 600, color: o.color || C.bg, alpha: o.alpha ?? 1 });
+  return w;
+}
+function phone(im, cx, cy, h, zoom = 1, fx = .5, fy = .5) {      // the real recording inside a plain phone body
+  const w = h * 720 / 1624, x = cx - w / 2, y = cy - h / 2, b = 14;
+  g.save(); g.fillStyle = '#05070B'; rrect(x - b, y - b, w + 2 * b, h + 2 * b, 46); g.fill();
+  g.strokeStyle = '#2A3550'; g.lineWidth = 2; g.stroke();
+  rrect(x, y, w, h, 34); g.clip();
+  if (im) { const sw = 720 / zoom, sh = 1624 / zoom, sx = clamp(fx * 720 - sw / 2, 0, 720 - sw), sy = clamp(fy * 1624 - sh / 2, 0, 1624 - sh);
+    g.drawImage(im, sx, sy, sw, sh, x, y, w, h); }
+  else { g.fillStyle = '#FF3B30'; g.fillRect(x, y, w, h); }
+  g.restore(); return { x, y, w, h, zoom, fx, fy };
+}
+const phoneToScreen = (p, fx, fy) => { const sw = 1 / p.zoom, sx = clamp(p.fx - sw / 2, 0, 1 - sw), sy = clamp(p.fy - sw / 2, 0, 1 - sw);
+  return [p.x + (fx - sx) / sw * p.w, p.y + (fy - sy) / sw * p.h]; };
+function phoneRing(p, fx0, fy0, fx1, fy1, k) {
+  if (k <= 0) return; const [x0, y0] = phoneToScreen(p, fx0, fy0), [x1, y1] = phoneToScreen(p, fx1, fy1);
+  g.save(); g.strokeStyle = C.amber; g.lineWidth = 4; g.globalAlpha = clamp(k * 1.4); rrect(x0 - 6, y0 - 6, (x1 - x0 + 12) * (0.6 + 0.4 * easeOut(k)), y1 - y0 + 12, 10); g.stroke(); g.restore();
+}
+const pop = (lt, t0, sp = SPRINGS.base) => spring(lt - t0, ...sp);
+function source(str, k = 1) { text(str, W - 120, 130, 21, { font: F.mono, weight: 500, color: C.dim, align: 'right', alpha: clamp(k) }); }
+
+// ---- Captions: the narration, burned in, readable with the sound off
+function captions(t) {
+  const ln = TL.lines.find(l => t >= l.from - 0.05 && t < l.to + 0.3); if (!ln) return;
+  const a = swapAlpha(t, ln.from - 0.12, ln.to + 0.3), size = 38, lines = wrap(ln.caption, 1500, size, F.ui, 600);
+  const lh = size * 1.32, h = lines.length * lh + 30, y = H - 56 - h;
+  g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(5,7,11,0.86)'; rrect(L.cx - 820, y, 1640, h, 18); g.fill(); g.restore();
+  lines.forEach((s, i) => text(s, L.cx, y + 15 + lh * (i + 0.74), size, { align: 'center', weight: 600, color: '#FFFFFF', alpha: a }));
 }
 
-// ---- Shots. Each: { from, to, draw(lt, t, dur), load?(lt) } where lt = time inside the shot. Paint the whole frame.
-// A shot showing a recorded flow awaits its frame in load(), e.g. async load(lt) { this.im = await seqFrame('flow', lt); }, then draw with this.im
-// Write the READS first (what the viewer must understand, in order, with time to land), then the code.
+// ---- Shots (READS listed per shot; lt = time inside the shot)
 const SHOTS = [
-  { from: 0, to: 3, draw(lt) {                                   // Hook: the problem, word by word on the beat
-      const words = ['Your', 'demo', 'deserves', 'motion.'];
-      let size = (L.portrait ? 120 : 150) * u;
-      g.save(); g.font = `400 ${size}px ${F.display}`;
-      const fit = Math.min(1, (W - 2 * L.safe.side) / (words.reduce((a, w) => a + g.measureText(w + ' ').width, 0) - g.measureText(' ').width));
-      size *= fit; g.font = `400 ${size}px ${F.display}`;          // shrink to fit the frame (9:16 reframe)
-      const widths = words.map(w => g.measureText(w + ' ').width), sp = g.measureText(' ').width;
-      const total = widths.reduce((a, b) => a + b, 0) - sp;
-      g.restore();
-      let x = L.cx - total / 2;
-      words.forEach((w, i) => {
-        const t0 = beatAt(i, BEAT) + .05, s = spring(lt - t0, ...SPRINGS.snappy);
-        text(w, x + (widths[i] - sp) / 2, L.cy + (1 - s) * 40 * u, size, { alpha: clamp(s * 1.5), color: i === 3 ? C.accent : C.ink });
-        x += widths[i];
+  { id: 's01', async load(lt) { this.im = await seqFrame('tg', 17.2); },
+    draw(lt) {                                 // reads: an alert on a phone → it is about a MUSD loan → this is Vigil
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const pull = pop(lt, 2.2, SPRINGS.heavy), h = lerp(1900, 780, pull) * (1 + 0.012 * lt);
+      const cx = lerp(L.cx, 600, pull), cy = lerp(450 - (0.745 - 0.5) * 1900, 470, pull);   // close-up on the alert card, then pull back
+      phone(this.im, cx, cy, h);
+      const k1 = pop(lt, 2.9), k2 = pop(lt, 3.25);
+      kicker('@VigilMezoBot · live on Mezo testnet', 980, 380, k1);
+      heading('A warning before your Bitcoin is at risk.', 980, 470, 76, k2, C.text, 800);
+    } },
+  { id: 's02', draw(lt) {                      // reads: two ways to lose BTC → liquidation <110% → redemption, lowest ratio first → the dated stat
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      kicker('The problem', 120, 150, pop(lt, 0.2)); heading('Two ways to lose your Bitcoin on Mezo', 120, 230, 64, pop(lt, 0.35), C.text, 1600);
+      const cards = [
+        { t: at('l03', 's02', -0.1), title: 'Liquidation', sub: 'Your ratio falls below 110%. Everyone watches this one.', hot: false },
+        { t: at('l04', 's02', 0.4), title: 'Redemption', sub: 'Mezo takes BTC from the lowest-ratio loans first, even healthy ones.', hot: true },
+      ];
+      cards.forEach((c, i) => {
+        const k = pop(lt, c.t), x = 120 + i * 850, y = 330 + (1 - k) * 60;
+        g.save(); g.globalAlpha = clamp(k * 1.6); g.fillStyle = c.hot ? C.light : C.panel; rrect(x, y, 810, 320, 26); g.fill();
+        if (!c.hot) { g.strokeStyle = C.line; g.lineWidth = 2; g.stroke(); } g.restore();
+        text(`0${i + 1}`, x + 48, y + 80, 30, { font: F.mono, weight: 700, color: c.hot ? '#A85F00' : C.amber, alpha: clamp(k * 1.6) });
+        text(c.title, x + 48, y + 160, 60, { font: F.display, weight: 700, color: c.hot ? C.ink : C.text, alpha: clamp(k * 1.6) });
+        wrap(c.sub, 700, 32, F.ui, 500).forEach((s, j) => text(s, x + 48, y + 225 + j * 44, 32, { color: c.hot ? '#3B4A66' : C.mute, alpha: clamp(k * 1.6) }));
       });
-  }},
-  { from: 3, to: 8, draw(lt) {                                   // Real product UI assembles, cursor does a real action
-      const s = spring(lt - .05, ...SPRINGS.base);
-      const ar = IMG.screen ? IMG.screen.naturalHeight / IMG.screen.naturalWidth : 9 / 16;   // keep the capture's real aspect
-      const pw = Math.min((L.portrait ? .8 : .66) * W, .72 * H / ar), ph = pw * ar, px = L.cx - pw / 2, py = L.cy - ph / 2 + (1 - s) * 80 * u;
-      g.save(); g.globalAlpha = clamp(s * 2);
-      g.shadowColor = 'rgba(30,27,36,.18)'; g.shadowBlur = 60 * u; g.shadowOffsetY = 20 * u;
-      g.fillStyle = C.panel; rrect(px, py, pw, ph, 18 * u); g.fill(); g.shadowColor = 'transparent';
-      g.translate(L.cx, L.cy); g.scale(.92 + .08 * s, .92 + .08 * s); g.translate(-L.cx, -L.cy);
-      picture('screen', px, py, pw, ph); g.restore();
-      const [cx, cy] = trackN(lt, [[0, [W * 1.05, H * .9]], [1.2, [px + pw * .7, py + ph * .35]], [2.6, [px + pw * .3, py + ph * .6]]], ...SPRINGS.base);
-      const press = Math.max(clamp(1 - Math.abs(lt - 2.1) / .12), clamp(1 - Math.abs(lt - 3.5) / .12));
-      if (press > 0) { g.save(); g.globalAlpha = press * .35; g.fillStyle = C.accent; g.beginPath(); g.arc(cx, cy, 30 * u * (1.5 - press * .5), 0, Math.PI * 2); g.fill(); g.restore(); }
-      cursor(cx, cy, press);
-  }},
-  { from: 8, to: 10, draw(lt) {                                  // One number that proves it (must be a REAL, sourced number)
-      const k = easeOut(seg(lt, .1, 1.1)), n = Math.round(k * STAT.value);
-      text(String(n), L.cx, L.cy - 40 * u, 260 * u, { color: C.accent });
-      text(STAT.label, L.cx, L.cy + 120 * u, 40 * u, { font: F.ui, color: C.mute, alpha: seg(lt, .6, 1) });
-      if (STAT.source === 'PLACEHOLDER') text('PLACEHOLDER NUMBER: replace with a sourced metric', L.cx, H - 60 * u, 28 * u, { font: F.ui, weight: 700, color: '#FF3B30' });
-  }},
-  { from: 10, to: 12, draw(lt) {                                 // Lockup + CTA, then hold so the last read lands
-      const s = spring(lt - .05, ...SPRINGS.heavy);
-      text('Productname', L.cx, L.cy - 20 * u, 150 * u * (.9 + .1 * s), { alpha: clamp(s * 1.5) });
-      text('try it at product.app', L.cx, L.cy + 90 * u, 38 * u, { font: F.ui, weight: 600, color: C.accent, alpha: seg(lt, .5, .8) });
-  }},
+      const ks = pop(lt, at('l04', 's02', 5.0));
+      g.save(); g.globalAlpha = clamp(ks * 1.5); g.fillStyle = 'rgba(245,165,36,0.12)'; rrect(120, 690 + (1 - ks) * 30, 1660, 96, 18); g.fill(); g.restore();
+      text('Mezo testnet, 15 Oct: the lowest-ratio loan was 1.1% from liquidation, and #1 of 244 in the redemption queue.', 150, 750 + (1 - ks) * 30, 28, { color: C.text, weight: 500, alpha: clamp(ks * 1.5) });
+      source('Source: Vigil monitor read of trove 0xda04…aaaa, 2026-10-15', ks);
+    } },
+  { id: 's03', async load(lt) { this.im = await seqFrame('tg', clamp(8.0 + lt, 0, 18.3)); },
+    draw(lt) {                                 // reads: send /watch → the card arrives → liquidation → queue → interest drift
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const card = lt >= 6.6, kz = pop(lt, 6.9, SPRINGS.heavy);
+      const ph = lerp(800, 1480, kz), p = phone(this.im, 560, lerp(470, 470 - (0.80 - 0.5) * 1480, kz), ph);
+      kicker('Telegram · @VigilMezoBot', 1040, 300, pop(lt, 0.2));
+      heading('Send /watch with your Mezo address', 1040, 390, 60, pop(lt, 0.35), C.text, 760);
+      const items = [
+        { t: at('l06', 's03', 3.6), y0: .785, y1: .808, label: 'Liquidation price', val: '$60,563 · 26.3% away' },
+        { t: at('l06', 's03', 5.4), y0: .808, y1: .858, label: 'Redemption queue', val: '#84 of 247' },
+        { t: at('l06', 's03', 7.2), y0: .862, y1: .884, label: 'Interest drift', val: '12,999 days to 110%' },
+      ];
+      items.forEach((it, i) => {
+        const k = card ? pop(lt, it.t, SPRINGS.snappy) : 0, nextT = items[i + 1] ? items[i + 1].t : 1e9;
+        phoneRing(p, .045, it.y0, .86, it.y1, lt < nextT ? k : 0);
+        text(it.label, 1040, 600 + i * 100 + (1 - k) * 16, 34, { font: F.display, weight: 700, color: C.text, alpha: clamp(k * 1.5) });
+        text(it.val, 1040, 640 + i * 100 + (1 - k) * 16, 28, { font: F.mono, weight: 500, color: C.amber, alpha: clamp(k * 1.5) });
+      });
+      source('Screen recording of @VigilMezoBot, 2026-10-16 · Mezo testnet', pop(lt, 1));
+    } },
+  { id: 's04', draw(lt) {                      // reads: same data on the web → it is a real testnet loan (badge)
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      kicker('Web app · vigil-mezo.up.railway.app', 120, 130, pop(lt, 0.1));
+      const push = pop(lt, 0.2, SPRINGS.heavy), z = lerp(1.12, 1.22, seg(lt, 0, 8.5));
+      const v = camera('position', .5, lerp(.31, .30, push), z, 120, 170, 1680, 700, 22);
+      ring(v, .64, .04, .715, .0725, pop(lt, at('l07', 's04', 2.9), SPRINGS.snappy));
+      ring(v, .344, .456, .656, .594, pop(lt, at('l07', 's04', 0.6), SPRINGS.snappy), 'rgba(245,165,36,0.7)');
+    } },
+  { id: 's05', draw(lt) {                      // reads: reserve → trigger → sign Mezo's message → Mezo checks it; EVM wallet only
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const tRes = at('l08', 's05', 2.4), tTrig = at('l08', 's05', 4.0), tSign = at('l08', 's05', 5.2), tMezo = at('l09', 's05', 0);
+      const onRescue = lt >= tSign;
+      kicker('Pre-signed rescue', 120, 130, pop(lt, 0.1));
+      const steps = [['1', 'Reserve', tRes], ['2', 'Trigger', tTrig], ['3', 'Sign', tSign]];
+      steps.forEach(([n, s, t0], i) => { const k = pop(lt, t0, SPRINGS.snappy), on = lt >= t0;
+        pill(`${n}  ${s}`, 720 + i * 250, 92, 26, { alpha: clamp(0.35 + k), bg: on ? C.amber : C.panel, color: on ? C.bg : C.mute }); });
+      if (!onRescue) {
+        const fy = track(lt, [[0, .36], [tTrig, .69]], 120, 22), z = track(lt, [[0, 1.25], [tRes, 1.45]], 120, 22);
+        const v = camera('reserve', .5, fy, z, 120, 170, 1680, 700);
+        ring(v, .169, .19, .831, .541, pop(lt, tRes, SPRINGS.snappy) * (lt < tTrig ? 1 : 0));
+        ring(v, .169, .561, .831, .8125, pop(lt, tTrig, SPRINGS.snappy));
+      } else {
+        const lt2 = lt - tSign, fy = track(lt2, [[0, .43], [tMezo - tSign, .33]], 120, 22), z = track(lt2, [[0, 1.3], [tMezo - tSign, 1.45]], 120, 22);
+        const v = camera('rescue', .5, fy, z, 120, 170, 1680, 700);
+        ring(v, .724, .558, .817, .61, pop(lt2, 0.3, SPRINGS.snappy) * (lt < tMezo ? 1 : 0));
+        ring(v, .177, .325, .83, .362, pop(lt, tMezo + 0.6, SPRINGS.snappy));
+        ring(v, .177, .252, .5, .272, pop(lt, tMezo + 3.2, SPRINGS.snappy), 'rgba(245,165,36,0.75)');
+      }
+    } },
+  { id: 's06', draw(lt) {                      // reads: on-chain tx → Success · rescue → sent by Vigil's keeper → 300 MUSD burnt → ratio up
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const t1 = at('l10', 's06', 0.8), t2 = at('l10', 's06', 3.6), t3 = at('l11', 's06', 0.2), t4 = at('l11', 's06', 3.0);
+      kicker('Mezo testnet explorer · the rescue', 120, 130, pop(lt, 0.1));
+      const fy = track(lt, [[0, .28], [t1, .34], [t2, .47], [t3, .53]], 110, 22), z = track(lt, [[0, 1.2], [t1, 1.55]], 110, 22);
+      const wv = lt >= t4 ? lerp(1680, 1040, pop(lt, t4, SPRINGS.base)) : 1680;
+      const v = camera('rtx', .42, fy, z, 120, 170, wv, 700);
+      ring(v, .043, .257, .975, .278, pop(lt, 0.4, SPRINGS.snappy) * (lt < t1 ? 1 : 0), 'rgba(245,165,36,0.8)');
+      ring(v, .145, .333, .36, .35, pop(lt, t1, SPRINGS.snappy));
+      ring(v, .145, .45, .52, .497, pop(lt, t2, SPRINGS.snappy));
+      ring(v, .145, .54, .52, .558, pop(lt, t3, SPRINGS.snappy));
+      const k = pop(lt, t4 + 0.15);
+      if (lt >= t4) {
+        const x = 1200 + (1 - k) * 80;
+        g.save(); g.globalAlpha = clamp(k * 1.5); g.fillStyle = C.panel; rrect(x, 170, 600, 700, 22); g.fill(); g.strokeStyle = C.line; g.lineWidth = 2; g.stroke(); g.restore();
+        text('Collateral ratio', x + 44, 260, 30, { color: C.mute, alpha: clamp(k * 1.5) });
+        const cnt = 130.94 + (148.77 - 130.94) * easeOut(seg(lt, t4 + 0.4, t4 + 2.0));
+        text('130.94%', x + 44, 360, 56, { font: F.mono, weight: 700, color: C.mute, alpha: clamp(k * 1.5) });
+        text('↓', x + 44, 440, 44, { font: F.mono, weight: 700, color: C.amber, alpha: clamp(k * 1.5) });
+        text(cnt.toFixed(2) + '%', x + 44, 530, 80, { font: F.mono, weight: 700, color: C.amber, alpha: clamp(k * 1.5) });
+        wrap('Rescued event: 300 MUSD repaid from the Vigil reserve', 510, 26, F.ui, 500).forEach((s, i) => text(s, x + 44, 620 + i * 36, 26, { color: C.mute, alpha: clamp(k * 1.5) }));
+        wrap('Test loan set up by script · rescue submitted by the live keeper', 510, 24, F.ui, 600).forEach((s, i) => text(s, x + 44, 740 + i * 34, 24, { color: C.amber, alpha: clamp(k * 1.5) }));
+      }
+      source('tx 0x36505f76…8347 · block 16,183,495 · 2026-10-16 03:47 UTC', pop(lt, 1));
+    } },
+  { id: 's07', draw(lt) {                      // reads: refusal 1 (above trigger) → refusal 2 (Mezo: invalid signature)
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      kicker('Refused on-chain', 120, 130, pop(lt, 0.1));
+      const items = [
+        { name: 'rejA', t: at('l12', 's07', 2.0), title: 'AboveTrigger', sub: 'VigilReserve: loan at 130.89%, trigger 120%' },
+        { name: 'rejB', t: at('l12', 's07', 4.6), title: 'Invalid signature', sub: 'Mezo itself: amount changed after signing' },
+      ];
+      items.forEach((it, i) => {
+        const k = pop(lt, it.t), x = 120 + i * 850, y = 170 + (1 - k) * 60;
+        g.save(); g.globalAlpha = clamp(k * 1.6);
+        const v = camera(it.name, .33, .48, 2.3, x, y, 810, 480, 18);
+        ring(v, .265, .445, .305, .475, pop(lt, it.t + 0.6, SPRINGS.snappy));
+        g.restore();
+        text(it.title, x, y + 560, 44, { font: F.mono, weight: 700, color: C.amber, alpha: clamp(k * 1.6) });
+        text(it.sub, x, y + 610, 28, { color: C.mute, alpha: clamp(k * 1.6) });
+      });
+      source('Revert reasons replayed with eth_call at the block before each tx · docs/evidence.md', pop(lt, items[1].t + 1));
+    } },
+  { id: 's08', draw(lt) {                      // reads: source verified → no owner → 12/12 fork tests
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      kicker('VigilReserve · 0x9829…cf3E', 120, 130, pop(lt, 0.1));
+      const z = lerp(1.1, 1.38, pop(lt, 0.4, SPRINGS.heavy)), v = camera('contract', .56, lerp(.45, .78, pop(lt, 0.4, SPRINGS.heavy)), z, 120, 170, 1060, 700);
+      ring(v, .565, .775, .98, .8, pop(lt, at('l13', 's08', 1.6), SPRINGS.snappy), '#2EA36B');
+      const facts = [['No owner, no admin', at('l13', 's08', 0.4)], ['Source verified (exact match)', at('l13', 's08', 1.6)], ['12 / 12 fork tests vs Mezo’s contracts', at('l13', 's08', 3.2)]];
+      facts.forEach(([s, t0], i) => { const k = pop(lt, t0, SPRINGS.snappy);
+        g.save(); g.globalAlpha = clamp(k * 1.5); g.fillStyle = C.panel; rrect(1230, 230 + i * 190 + (1 - k) * 20, 570, 150, 20); g.fill(); g.strokeStyle = C.line; g.lineWidth = 2; g.stroke(); g.restore();
+        wrap(s, 480, 36, F.display, 700).forEach((ln, j) => text(ln, 1270, 295 + i * 190 + j * 42 + (1 - k) * 20, 36, { font: F.display, weight: 700, alpha: clamp(k * 1.5) }));
+      });
+      source('explorer.test.mezo.org · forge test on a fork of Mezo testnet, 2026-10-15', pop(lt, 1));
+    } },
+  { id: 's09', draw(lt) {                      // reads: Vigil → where to try it → testnet, not audited
+      g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const k = pop(lt, 0.15, SPRINGS.heavy), s = 230;
+      g.save(); g.globalAlpha = clamp(k * 1.4); g.translate(240, 190 + (1 - k) * 30); g.scale(s / 512, s / 512);
+      g.fillStyle = C.panel; rrect(0, 0, 512, 512, 112); g.fill();
+      g.lineCap = 'round'; g.strokeStyle = C.amber; g.lineWidth = 32; g.beginPath(); g.moveTo(96, 290); g.bezierCurveTo(140, 196, 196, 150, 256, 150); g.bezierCurveTo(316, 150, 372, 196, 416, 290); g.stroke();
+      g.fillStyle = C.amber; g.beginPath(); g.arc(256, 282, 54, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = C.text; g.lineWidth = 20; g.beginPath(); g.moveTo(96, 362); g.lineTo(416, 362); g.stroke(); g.restore();
+      text('Vigil', 520, 360 + (1 - k) * 30, 170, { font: F.display, weight: 700, alpha: clamp(k * 1.4) });
+      text('A guard for MUSD loans on Mezo', 528, 420 + (1 - k) * 30, 40, { color: C.mute, alpha: clamp(k * 1.4) });
+      [['t.me/VigilMezoBot', 0.9], ['vigil-mezo.up.railway.app', 1.15], ['github.com/nftkingiii/vigil', 1.4]].forEach(([s, t0], i) =>
+        text(s, 240, 580 + i * 70, 44, { font: F.mono, weight: i === 0 ? 700 : 500, color: i === 0 ? C.amber : C.text, alpha: clamp(pop(lt, t0, SPRINGS.snappy) * 1.5) }));
+      pill('Mezo testnet · not audited', 240, 800, 24, { bg: C.panel, color: C.mute, alpha: clamp(pop(lt, 1.8)) });
+    } },
 ];
+SHOTS.forEach(s => { s.from = TL.shots[s.id].from; s.to = TL.shots[s.id].to; });
 
+// ---- Seams: one transition per pair, chosen for the story
+const SEAMS = { s02: 'push', s03: 'iris', s04: 'push', s05: 'push', s06: 'iris', s07: 'push', s08: 'push', s09: 'iris' };
+const IRIS_AT = { s03: [600, 520], s06: [1800, 760], s09: [L.cx, L.cy] };
+
+async function paint(s, t) { if (s.load) await s.load(t - s.from); g.save(); s.draw(t - s.from); g.restore(); }
 async function draw(t) {
-  const i = SHOTS.findIndex(s => t >= s.from && t < s.to), s = SHOTS[i === -1 ? SHOTS.length - 1 : i];
-  if (s.load) await s.load(t - s.from);                          // fetch sequence frames BEFORE painting anything
-  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
-  s.draw(t - s.from, t, s.to - s.from);
-  // Transition: a quick accent wipe across every seam (replace per story: match cut, cut on action, whip, iris)
-  for (const n of SHOTS.slice(1)) { const k = seg(t, n.from - .18, n.from + .18); if (k > 0 && k < 1) { g.fillStyle = C.accent; const x = easeInOut(k) * (W * 2) - W; g.fillRect(x, 0, W, H); } }
+  let i = SHOTS.findIndex(s => t >= s.from && t < s.to); if (i === -1) i = SHOTS.length - 1;
+  const cur = SHOTS[i], next = SHOTS[i + 1], prev = SHOTS[i - 1];
+  const win = 0.42;
+  // transition window straddles the seam: [seam - win/2, seam + win/2]
+  let a = null, b = null, k = 0, type = null;
+  if (next && t > next.from - win / 2) { a = cur; b = next; k = seg(t, next.from - win / 2, next.from + win / 2); type = SEAMS[next.id]; }
+  else if (prev && t < cur.from + win / 2) { a = prev; b = cur; k = seg(t, cur.from - win / 2, cur.from + win / 2); type = SEAMS[cur.id]; }
+  if (!a) { await paint(cur, t); }
+  else if (type === 'iris') {
+    await paint(a, t); g.save(); const [x, y] = IRIS_AT[b.id]; g.beginPath(); g.arc(x, y, easeInOut(k) * Math.hypot(W, H), 0, Math.PI * 2); g.clip(); await paint(b, t); g.restore();
+  } else {
+    const e = easeInOut(k);
+    g.save(); g.translate(-e * W * 0.35, 0); await paint(a, t); g.restore();
+    g.save(); g.beginPath(); g.rect(W * (1 - e), 0, W * e + 1, H); g.clip(); g.translate(W * (1 - e) * 0.35, 0); await paint(b, t); g.restore();
+  }
+  captions(t);
 }
 window.seek = async t => { await window.ready; await draw(t); };
 
-// ---- Live preview (off during render): plays, click pauses, arrows step a frame, shift+arrows a second
 if (!Q.has('render')) {
   let t = 0, playing = true, last = performance.now();
   addEventListener('click', () => playing = !playing);
   addEventListener('keydown', e => { const d = e.shiftKey ? 1 : 1 / FILM.fps; if (e.key === 'ArrowRight') t += d; if (e.key === 'ArrowLeft') t -= d; t = loopT(t, FILM.dur); playing = false; });
-  window.ready.then(function loop(now = performance.now()) { if (playing) t = loopT(t + (now - last) / 1000, FILM.dur); last = now; draw(t); document.title = t.toFixed(2); requestAnimationFrame(loop); });
+  window.ready.then(async function loop(now = performance.now()) { if (playing) t = loopT(t + (now - last) / 1000, FILM.dur); last = now; await draw(t); document.title = t.toFixed(2); requestAnimationFrame(loop); });
 }
 </script></body></html>

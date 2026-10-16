@@ -1,0 +1,102 @@
+{
+  "voice": "af_heart",
+  "speed": 1.0,
+  "preroll": 0.6,
+  "lineGap": 0.35,
+  "shotGap": 0.9,
+  "tail": 3.2,
+  "shotMin": {
+    "s01": 6.5,
+    "s03": 12,
+    "s06": 14,
+    "s07": 11,
+    "s04": 8.5,
+    "s08": 8.5
+  },
+  "lines": [
+    {
+      "id": "l01",
+      "shot": "s01",
+      "say": "This is Vigil, warning a borrower that their MUSD loan just slipped below their alert line.",
+      "caption": "Vigil, warning a borrower: their MUSD loan just slipped below its alert line."
+    },
+    {
+      "id": "l02",
+      "shot": "s02",
+      "say": "On Mezo, there are two ways to lose your Bitcoin.",
+      "caption": "On Mezo, there are two ways to lose your Bitcoin."
+    },
+    {
+      "id": "l03",
+      "shot": "s02",
+      "say": "Liquidation, below one hundred and ten percent.",
+      "caption": "Liquidation, below 110%."
+    },
+    {
+      "id": "l04",
+      "shot": "s02",
+      "say": "And redemption. Mezo takes Bitcoin from the lowest-ratio loans first, even healthy ones. Most borrowers never see it coming.",
+      "caption": "And redemption: Mezo takes BTC from the lowest-ratio loans first, even healthy ones. Most borrowers never see it coming."
+    },
+    {
+      "id": "l05",
+      "shot": "s03",
+      "say": "Vigil watches both. Send it your Mezo address.",
+      "caption": "Vigil watches both. Send it your Mezo address."
+    },
+    {
+      "id": "l06",
+      "shot": "s03",
+      "say": "Every minute, it reads every loan on Mezo, and tells you your liquidation price, your place in the redemption queue, and how long interest alone takes to hurt you.",
+      "caption": "Every minute it reads every loan on Mezo: your liquidation price, your place in the redemption queue, and how long interest alone takes to hurt you."
+    },
+    {
+      "id": "l07",
+      "shot": "s04",
+      "say": "The same view lives on the web. This is a real loan on Mezo testnet, read live.",
+      "caption": "The same view on the web: a real loan on Mezo testnet, read live."
+    },
+    {
+      "id": "l08",
+      "shot": "s05",
+      "say": "For the bad night, set up a rescue. Keep a MUSD reserve, pick a trigger, and sign Mezo's own repay message, once.",
+      "caption": "For the bad night, set up a rescue: keep a MUSD reserve, pick a trigger, and sign Mezo's own repay message once."
+    },
+    {
+      "id": "l09",
+      "shot": "s05",
+      "say": "Mezo checks that signature itself, so Vigil can't change the amount, the loan, or the deadline.",
+      "caption": "Mezo checks that signature itself, so Vigil can't change the amount, the loan or the deadline."
+    },
+    {
+      "id": "l10",
+      "shot": "s06",
+      "say": "Here it is on chain. When this test loan crossed its trigger, Vigil's keeper submitted the rescue on its own.",
+      "caption": "On-chain: when this test loan crossed its trigger, Vigil's keeper submitted the rescue on its own."
+    },
+    {
+      "id": "l11",
+      "shot": "s06",
+      "say": "Three hundred MUSD repaid from the reserve, and the ratio went from about one thirty-one, to one forty-nine percent.",
+      "caption": "300 MUSD repaid from the reserve. Ratio 130.9% \u2192 148.8%."
+    },
+    {
+      "id": "l12",
+      "shot": "s07",
+      "say": "It also refuses what it should. A rescue while the loan is above its trigger. And a signature with a changed amount, which Mezo rejects itself.",
+      "caption": "It refuses what it should: a rescue above the trigger, and a signature with a changed amount, which Mezo rejects itself."
+    },
+    {
+      "id": "l13",
+      "shot": "s08",
+      "say": "The contract has no owner, its source is verified, and twelve fork tests run against Mezo's real contracts.",
+      "caption": "No owner. Verified source. 12 fork tests against Mezo's real contracts."
+    },
+    {
+      "id": "l14",
+      "shot": "s09",
+      "say": "Vigil. A guard for MUSD loans on Mezo. Try it on Telegram today.",
+      "caption": "Vigil: a guard for MUSD loans on Mezo. Try it on Telegram today."
+    }
+  ]
+}

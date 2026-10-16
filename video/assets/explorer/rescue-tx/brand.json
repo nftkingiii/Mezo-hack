@@ -1,8 +1,9 @@
 {
  "url": "https://explorer.test.mezo.org/tx/0x36505f769fecbff092c85736a9f09e1c9fc006bf4454d387effe70a8ad5e8347",
- "captured": "2026-10-16T05:13:51.782Z",
+ "captured": "2026-10-16T05:22:56.512Z",
  "shots": [
-  "assets/explorer/rescue-tx/screen-1920x1080.png"
+  "assets/explorer/rescue-tx/screen-1920x1080.png",
+  "assets/explorer/rescue-tx/full-1920x1080.png"
  ],
  "title": "Mezo Testnet transaction 0x36505f769fecbff092c85736a9f09e1c9fc006bf4454d387effe70a8ad5e8347 | Blockscout",
  "colors": [
