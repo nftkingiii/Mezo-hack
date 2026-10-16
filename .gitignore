@@ -10,3 +10,9 @@ node_modules/
 
 # Local data
 bot/data/
+
+# Internal hack notes (kept local, not published)
+PROJECT_STATE.md
+HACK_EVENT_GATE.json
+IDEAS.md
+DESIGN.md

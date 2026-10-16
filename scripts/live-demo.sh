@@ -7,7 +7,7 @@ set -euo pipefail
 STEP=${1:?usage: live-demo.sh open|reserve|arm|reject-above|trigger|reject-tamper}
 KEY_FILE=${KEY_FILE:-$HOME/.vigil/deployer.key}
 RPC=${RPC:-https://rpc.test.mezo.org}
-VIGIL_URL=${VIGIL_URL:-https://vigil-production-c566.up.railway.app}
+VIGIL_URL=${VIGIL_URL:-https://vigil-mezo.up.railway.app}
 CAST=${CAST:-cast}
 
 MUSD=0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503

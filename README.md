@@ -4,7 +4,7 @@
 
 **A guardian for MUSD loans on Mezo.** Vigil watches your trove, warns you in Telegram before you get liquidated *or redeemed against*, and can submit a rescue you signed in advance, from a MUSD reserve only you control.
 
-- App: https://vigil-production-c566.up.railway.app
+- App: https://vigil-mezo.up.railway.app
 - Telegram: [@VigilMezoBot](https://t.me/VigilMezoBot)
 - Contract (Mezo testnet, verified): [`VigilReserve` 0x9829…cf3E](https://explorer.test.mezo.org/address/0x9829963c86bf6A8AC47b0996eAD58cf3e630cf3E)
 - Evidence (transactions, tests, read-backs): [`docs/evidence.md`](docs/evidence.md)
