@@ -2,7 +2,7 @@
 
 # Vigil
 
-**A guardian for MUSD loans on Mezo.** Vigil watches your trove, warns you in Telegram before you get liquidated *or redeemed against*, and can submit a rescue you signed in advance, from a MUSD reserve only you control.
+**Telegram alerts before your Mezo MUSD loan is liquidated or redeemed, plus a rescue you pre-sign.**
 
 - Demo video (1:40): https://youtu.be/0sAUZjEPfE4
 - App: https://vigil-mezo.up.railway.app
