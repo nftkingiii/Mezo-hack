@@ -49,13 +49,13 @@ export const helpText = `<b>Vigil</b> watches your MUSD loan on Mezo and warns y
 • <b>Stale price</b>: if Mezo's price feed is stale, Vigil says so and does nothing.
 
 <b>Commands</b>
-/watch &lt;address&gt; [alert%]: watch a Mezo address (default alert 150%)
+/watch &lt;address&gt; [alert%]: watch the 0x Mezo address that owns your MUSD loan (default alert 150%). If you sign in to Mezo with a Bitcoin wallet, use the 0x account shown in the Mezo app, not your bc1… address.
 /status: your positions now
 /alerts &lt;percent&gt;: change your alert line, e.g. /alerts 160
 /rescue: set up a pre-signed rescue
 /unwatch [address]: stop watching
 /help: this message
 
-<b>Rescue</b>: you keep a MUSD reserve in the Vigil contract and sign one capped repay in advance. If your ratio falls below your trigger, Vigil submits it. Mezo's own contract checks your signature, so Vigil can't change the amount, the loan or the deadline.
+<b>Rescue</b>: you keep a MUSD reserve in the Vigil contract and sign one capped repay in advance. If your ratio falls below your trigger, Vigil submits it. Mezo's own contract checks your signature, so Vigil can't change the amount, the loan or the deadline. Rescue needs an EVM wallet such as MetaMask; Bitcoin-wallet (Passport) accounts get alerts only.
 
 Mezo testnet only.`;

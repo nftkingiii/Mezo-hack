@@ -1,3 +1,5 @@
+<p align="center"><img src="brand/vigil-lockup.png" alt="Vigil" width="600"></p>
+
 # Vigil
 
 **A guardian for MUSD loans on Mezo.** Vigil watches your trove, warns you in Telegram before you get liquidated *or redeemed against*, and can submit a rescue you signed in advance, from a MUSD reserve only you control.
@@ -44,6 +46,12 @@ All on Mezo testnet (chain 31611). Details and links are in [`docs/evidence.md`]
 - **Live rejections:** `AboveTrigger` ([tx](https://explorer.test.mezo.org/tx/0x94b9e31e8c385f7459ec69c265a7c78dc924e0f5f60704fb8a79135f9a7417da)) and Mezo's `Invalid signature` for a tampered amount ([tx](https://explorer.test.mezo.org/tx/0x5400e79bbcf8e84252b8d37afbd2d6bd24c4c60f336ba638ccf4ac5366a77168)).
 
 The test borrower's setup transactions were scripted (`scripts/live-demo.sh`); the rescue transaction itself came from the live keeper.
+
+## Which address?
+
+Watch the **0x Mezo address that owns the loan** (the trove owner). If you sign in to Mezo with a Bitcoin wallet through Mezo Passport, that is the 0x smart account the Mezo app shows, not your `bc1…` address.
+
+Alerts work for any owner. The pre-signed rescue needs an EVM wallet (MetaMask, Rabby): Mezo checks rescue signatures with `ECDSA.recover(...) == borrower`, which a Passport smart account cannot satisfy.
 
 ## Architecture
 

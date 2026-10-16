@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400">
+<rect width="1200" height="400" fill="#0B0F17"/>
+<g transform="translate(64 64) scale(0.5235)">
+<rect width="512" height="512" rx="112" fill="#121826"/>
+<path d="M96 290C140 196 196 150 256 150s116 46 160 140" fill="none" stroke="#F5A524" stroke-width="32" stroke-linecap="round"/>
+<circle cx="256" cy="282" r="54" fill="#F5A524"/>
+<path d="M96 362H416" stroke="#E8ECF4" stroke-width="20" stroke-linecap="round"/></g>
+<text x="380" y="222" font-family="Inter, Helvetica, Arial, sans-serif" font-size="150" font-weight="700" fill="#E8ECF4" letter-spacing="-3">Vigil</text>
+<text x="384" y="292" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="500" fill="#8B96AD">guard for MUSD loans on Mezo</text>
+</svg>

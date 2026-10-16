@@ -62,6 +62,11 @@ bot.command("help", (ctx) => ctx.reply(helpText, html));
 
 bot.command("watch", async (ctx) => {
   const [addr, alertArg] = ctx.match.trim().split(/\s+/);
+  if (addr && /^(bc1|tb1|[13mn2])[a-zA-HJ-NP-Z0-9]{20,}$/.test(addr) && !addr.startsWith("0x")) {
+    return ctx.reply(
+      "That looks like a Bitcoin address. MUSD loans live on Mezo, which uses 0x addresses. Open the Mezo app, copy the 0x account that holds your loan, and send /watch 0x…",
+    );
+  }
   if (!addr || !isAddress(addr)) return ctx.reply("Usage: /watch 0xYourMezoAddress [alert%]\nExample: /watch 0xabc…123 160");
   const alert = parseAlert(alertArg);
   if (alert === "invalid") return ctx.reply("Alert line must be between 115% and 500%, e.g. 150.");
