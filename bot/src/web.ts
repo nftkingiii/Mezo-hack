@@ -8,7 +8,7 @@ import { addresses, client, mezoTestnet, repayTypedData, sigOpsAbi, vigilAbi } f
 import { latestSnapshot, monitorStatus } from "./monitor.ts";
 import { maxRepay, position, repayToReach } from "./risk.ts";
 import { rescues, watches } from "./store.ts";
-import { notifyBorrower } from "./telegram.ts";
+import { notifyBorrower, telegramEnabled } from "./telegram.ts";
 
 const MAX_DEADLINE_DAYS = 30;
 const startedAt = new Date().toISOString();
@@ -52,6 +52,7 @@ app.get("/health", async (c) => {
       vigilReserve: addresses.vigilReserve,
       monitor,
       keeper: await keeperStatus(),
+      telegram: telegramEnabled,
       watches: watches.count(),
       armedRescues: rescues.armed().length,
     },

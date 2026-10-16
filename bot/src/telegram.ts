@@ -1,7 +1,7 @@
 import { Bot, type Context } from "grammy";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { getAddress, isAddress } from "viem";
-import { config, requireTelegramToken } from "./config.ts";
+import { config } from "./config.ts";
 import { esc, helpText, positionCard } from "./format.ts";
 import { latestSnapshot } from "./monitor.ts";
 import { levelFor, parsePercent, pct, position } from "./risk.ts";
@@ -11,16 +11,18 @@ export const DEFAULT_ALERT_ICR = 15n * 10n ** 17n; // 150%
 const MIN_ALERT_ICR = 115n * 10n ** 16n; // 115%
 const MAX_ALERT_ICR = 500n * 10n ** 16n; // 500%
 
-const token = requireTelegramToken();
+/** Without a token the service still monitors, serves the page and runs the keeper; Telegram stays off. */
+const token = config.telegramToken;
+export const telegramEnabled = token.length > 0;
 
 /** Never let the bot token reach a log line: grammy puts it in request URLs and error messages. */
-export const redact = (s: string) => s.split(token).join("<token>");
+export const redact = (s: string) => (token ? s.split(token).join("<token>") : s);
 const logError = (where: string, e: unknown) =>
   console.error(where, redact(e instanceof Error ? `${e.name}: ${e.message}` : String(e)));
 
 // Honour HTTPS_PROXY where one is set (grammy's fetch does not read it on its own).
 const proxy = process.env.HTTPS_PROXY ?? process.env.https_proxy;
-export const bot = new Bot(token, proxy ? { client: { baseFetchConfig: { agent: new HttpsProxyAgent(proxy), compress: true } } } : {});
+export const bot = new Bot(token || "0:disabled", proxy ? { client: { baseFetchConfig: { agent: new HttpsProxyAgent(proxy), compress: true } } } : {});
 
 const html = { parse_mode: "HTML" as const, link_preview_options: { is_disabled: true } };
 
@@ -105,6 +107,7 @@ bot.command("rescue", (ctx) => {
 bot.catch((err) => logError("telegram error", err.error));
 
 export async function notify(chatId: number, text: string) {
+  if (!telegramEnabled) return;
   try {
     await bot.api.sendMessage(chatId, text, html);
   } catch (e) {
@@ -118,6 +121,10 @@ export async function notifyBorrower(borrower: string, text: string) {
 
 /** Starts polling; retries instead of crashing the service when Telegram is unreachable. */
 export async function startTelegram(attempt = 1): Promise<void> {
+  if (!telegramEnabled) {
+    console.warn("telegram: TELEGRAM_BOT_TOKEN not set, bot disabled");
+    return;
+  }
   try {
     await registerCommands();
     await bot.init();

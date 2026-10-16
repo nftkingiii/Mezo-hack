@@ -1,11 +1,5 @@
 import { isAddress, type Address } from "viem";
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing environment variable ${name}`);
-  return value;
-}
-
 const vigilReserve = process.env.VIGIL_RESERVE ?? "0x9829963c86bf6A8AC47b0996eAD58cf3e630cf3E";
 if (!isAddress(vigilReserve)) throw new Error("VIGIL_RESERVE is not an address");
 
@@ -23,7 +17,3 @@ export const config = {
   /** Keeper submits rescues only when this is "true". */
   keeperEnabled: (process.env.KEEPER_ENABLED ?? "true") === "true",
 };
-
-export function requireTelegramToken(): string {
-  return config.telegramToken || required("TELEGRAM_BOT_TOKEN");
-}
