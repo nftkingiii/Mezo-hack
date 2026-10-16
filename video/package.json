@@ -1,0 +1,14 @@
+{
+  "name": "video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sheet": "node render.mjs --every=0.5",
+    "verify": "node render.mjs --verify=0.2,3.1,6.4,9.9",
+    "frames": "node render.mjs --frames --workers=3 --sub=3",
+    "encode": "node render.mjs --encode"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

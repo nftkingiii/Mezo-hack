@@ -1,0 +1,80 @@
+{
+ "url": "https://vigil-mezo.up.railway.app/?borrower=0x16f2981DF2027e66857e3a857d6d3B2F858eCB4f",
+ "captured": "2026-10-16T05:13:17.100Z",
+ "shots": [
+  "assets/capture/screen-1920x1080.png",
+  "assets/capture/full-1920x1080.png",
+  "assets/capture/screen-390x844.png",
+  "assets/capture/full-390x844.png"
+ ],
+ "title": "Vigil · MUSD rescue",
+ "colors": [
+  {
+   "value": "rgb(232, 236, 244)",
+   "uses": 126
+  },
+  {
+   "value": "rgb(139, 150, 173)",
+   "uses": 87
+  },
+  {
+   "value": "rgb(37, 48, 73)",
+   "uses": 17
+  },
+  {
+   "value": "rgb(24, 32, 51)",
+   "uses": 14
+  },
+  {
+   "value": "rgb(26, 18, 3)",
+   "uses": 8
+  },
+  {
+   "value": "rgb(245, 165, 36)",
+   "uses": 8
+  },
+  {
+   "value": "rgb(18, 24, 38)",
+   "uses": 8
+  },
+  {
+   "value": "rgb(128, 128, 128)",
+   "uses": 4
+  },
+  {
+   "value": "rgb(245, 197, 66)",
+   "uses": 2
+  },
+  {
+   "value": "color(srgb 0.960784 0.772549 0.258824 / 0.18)",
+   "uses": 1
+  }
+ ],
+ "fonts": [
+  {
+   "value": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+   "uses": 122
+  },
+  {
+   "value": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+   "uses": 2
+  }
+ ],
+ "logos": [],
+ "cssVars": {
+  "--bg": "#0b0f17",
+  "--panel": "#121826",
+  "--panel-2": "#182033",
+  "--line": "#253049",
+  "--text": "#e8ecf4",
+  "--muted": "#8b96ad",
+  "--accent": "#f5a524",
+  "--accent-ink": "#1a1203",
+  "--ok": "#34c77b",
+  "--watch": "#f5c542",
+  "--danger": "#ff8a3d",
+  "--bad": "#ff5468",
+  "--radius": "14px",
+  "--mono": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+ }
+}

@@ -1,0 +1,135 @@
+<!doctype html>
+<!-- A seek(t) film. Every frame is a pure function of t: no CSS transitions, no timers, no state between frames,
+     no Math.random. Scrub it live in a browser (auto-plays, click to pause, arrow keys step); render with scripts/render.mjs. -->
+<html><head><meta charset="utf-8"><title>film</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;600;700&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#111}canvas{display:block;max-width:100vw;max-height:100vh;margin:auto}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script src="lib/motion.js"></script>
+<script>
+// ---- Film settings. ?w=1080&h=1920 reframes the same timeline to vertical (layout() below does the work).
+const Q = new URLSearchParams(location.search);
+const W = +(Q.get('w') || 1920), H = +(Q.get('h') || 1080);
+window.FILM = { w: W, h: H, dur: 120, fps: 30 };
+const BEAT = { bpm: 120, offset: 0 };            // replace with beats.json { bpm, offset } once the track is measured
+const L = layout(W, H), u = L.u;
+
+// ---- Look. Replace from assets/capture/brand.json (real colors + fonts). One accent unless the brief says otherwise.
+const C = { bg: '#F4F0EA', ink: '#1E1B24', mute: '#8A8494', accent: '#8B7FD1', panel: '#FFFFFF' };
+// Every number on screen needs a source (a tx hash, a benchmark log, a live dashboard). Placeholders render in red.
+const STAT = { value: 42, label: 'seconds from brief to first render', source: 'PLACEHOLDER' };
+const F = { display: '"Instrument Serif", Georgia, serif', ui: 'Inter, system-ui, sans-serif' };
+
+const cv = document.getElementById('c'); cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+
+// ---- Assets. Real captures only (scripts/capture.mjs). A missing asset renders as a loud MISSING box, never a fake UI.
+const IMG = {};
+function img(name, src) { const i = new Image(); i.src = src; IMG[name] = i; return i.decode().catch(() => { IMG[name] = null; console.warn('missing asset: ' + src); }); }
+// Image sequence from a recorded flow (assets/capture/flow/%05d.jpg): seek awaits the decode of the frame it needs.
+const SEQ = {};
+function seq(name, dir, fps, frames) { SEQ[name] = { dir, fps, frames, cache: new Map() }; }
+async function seqFrame(name, t) {
+  const s = SEQ[name]; if (!s) return null;
+  const n = Math.min(s.frames, Math.max(1, Math.floor(t * s.fps) + 1)), key = String(n).padStart(5, '0');
+  if (!s.cache.has(key)) { const i = new Image(); i.src = `${s.dir}/${key}.jpg`; s.cache.set(key, i.decode().then(() => i, () => null)); if (s.cache.size > 90) s.cache.delete(s.cache.keys().next().value); }
+  return s.cache.get(key);
+}
+window.ready = Promise.all([
+  // canvas never triggers a font download until first use: load every face/weight the film draws, up front
+  document.fonts.load(`400 100px ${F.display}`), document.fonts.load(`400 100px ${F.ui}`),
+  document.fonts.load(`600 100px ${F.ui}`), document.fonts.load(`700 100px ${F.ui}`),
+  // vertical films use the phone capture (capture.mjs --sizes=1920x1080,390x844)
+  img('screen', L.portrait ? 'assets/capture/screen-390x844.png' : 'assets/capture/screen-1920x1080.png'),
+  // img('logo', 'assets/logo.svg'),
+]);
+// seq('flow', 'assets/capture/flow', 30, 240);
+
+// ---- Drawing helpers
+function text(str, x, y, size, o = {}) {
+  g.save(); g.font = `${o.weight || 400} ${size}px ${o.font || F.display}`; g.fillStyle = o.color || C.ink;
+  g.textAlign = o.align || 'center'; g.textBaseline = 'middle'; g.globalAlpha *= o.alpha ?? 1;
+  if (o.track) g.letterSpacing = o.track + 'px';
+  g.fillText(str, x, y); g.restore();
+}
+function rrect(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function picture(name, x, y, w, h, r = 18 * u) {
+  const i = IMG[name];
+  g.save(); rrect(x, y, w, h, r); g.clip();
+  if (i) g.drawImage(i, x, y, w, h);
+  else { g.fillStyle = '#FF3B30'; g.fillRect(x, y, w, h); text('MISSING ASSET: ' + name, x + w / 2, y + h / 2, 36 * u, { font: F.ui, weight: 700, color: '#fff' }); }
+  g.restore();
+}
+function cursor(x, y, press = 0) {          // press 0..1 squashes the pointer on click
+  g.save(); g.translate(x, y); g.scale(1 - .15 * press, 1 - .15 * press);
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 34 * u); g.lineTo(9 * u, 26 * u); g.lineTo(16 * u, 40 * u); g.lineTo(22 * u, 37 * u); g.lineTo(15 * u, 24 * u); g.lineTo(26 * u, 24 * u); g.closePath();
+  g.fillStyle = C.ink; g.strokeStyle = '#fff'; g.lineWidth = 2.5 * u; g.fill(); g.stroke(); g.restore();
+}
+
+// ---- Shots. Each: { from, to, draw(lt, t, dur), load?(lt) } where lt = time inside the shot. Paint the whole frame.
+// A shot showing a recorded flow awaits its frame in load(), e.g. async load(lt) { this.im = await seqFrame('flow', lt); }, then draw with this.im
+// Write the READS first (what the viewer must understand, in order, with time to land), then the code.
+const SHOTS = [
+  { from: 0, to: 3, draw(lt) {                                   // Hook: the problem, word by word on the beat
+      const words = ['Your', 'demo', 'deserves', 'motion.'];
+      let size = (L.portrait ? 120 : 150) * u;
+      g.save(); g.font = `400 ${size}px ${F.display}`;
+      const fit = Math.min(1, (W - 2 * L.safe.side) / (words.reduce((a, w) => a + g.measureText(w + ' ').width, 0) - g.measureText(' ').width));
+      size *= fit; g.font = `400 ${size}px ${F.display}`;          // shrink to fit the frame (9:16 reframe)
+      const widths = words.map(w => g.measureText(w + ' ').width), sp = g.measureText(' ').width;
+      const total = widths.reduce((a, b) => a + b, 0) - sp;
+      g.restore();
+      let x = L.cx - total / 2;
+      words.forEach((w, i) => {
+        const t0 = beatAt(i, BEAT) + .05, s = spring(lt - t0, ...SPRINGS.snappy);
+        text(w, x + (widths[i] - sp) / 2, L.cy + (1 - s) * 40 * u, size, { alpha: clamp(s * 1.5), color: i === 3 ? C.accent : C.ink });
+        x += widths[i];
+      });
+  }},
+  { from: 3, to: 8, draw(lt) {                                   // Real product UI assembles, cursor does a real action
+      const s = spring(lt - .05, ...SPRINGS.base);
+      const ar = IMG.screen ? IMG.screen.naturalHeight / IMG.screen.naturalWidth : 9 / 16;   // keep the capture's real aspect
+      const pw = Math.min((L.portrait ? .8 : .66) * W, .72 * H / ar), ph = pw * ar, px = L.cx - pw / 2, py = L.cy - ph / 2 + (1 - s) * 80 * u;
+      g.save(); g.globalAlpha = clamp(s * 2);
+      g.shadowColor = 'rgba(30,27,36,.18)'; g.shadowBlur = 60 * u; g.shadowOffsetY = 20 * u;
+      g.fillStyle = C.panel; rrect(px, py, pw, ph, 18 * u); g.fill(); g.shadowColor = 'transparent';
+      g.translate(L.cx, L.cy); g.scale(.92 + .08 * s, .92 + .08 * s); g.translate(-L.cx, -L.cy);
+      picture('screen', px, py, pw, ph); g.restore();
+      const [cx, cy] = trackN(lt, [[0, [W * 1.05, H * .9]], [1.2, [px + pw * .7, py + ph * .35]], [2.6, [px + pw * .3, py + ph * .6]]], ...SPRINGS.base);
+      const press = Math.max(clamp(1 - Math.abs(lt - 2.1) / .12), clamp(1 - Math.abs(lt - 3.5) / .12));
+      if (press > 0) { g.save(); g.globalAlpha = press * .35; g.fillStyle = C.accent; g.beginPath(); g.arc(cx, cy, 30 * u * (1.5 - press * .5), 0, Math.PI * 2); g.fill(); g.restore(); }
+      cursor(cx, cy, press);
+  }},
+  { from: 8, to: 10, draw(lt) {                                  // One number that proves it (must be a REAL, sourced number)
+      const k = easeOut(seg(lt, .1, 1.1)), n = Math.round(k * STAT.value);
+      text(String(n), L.cx, L.cy - 40 * u, 260 * u, { color: C.accent });
+      text(STAT.label, L.cx, L.cy + 120 * u, 40 * u, { font: F.ui, color: C.mute, alpha: seg(lt, .6, 1) });
+      if (STAT.source === 'PLACEHOLDER') text('PLACEHOLDER NUMBER: replace with a sourced metric', L.cx, H - 60 * u, 28 * u, { font: F.ui, weight: 700, color: '#FF3B30' });
+  }},
+  { from: 10, to: 12, draw(lt) {                                 // Lockup + CTA, then hold so the last read lands
+      const s = spring(lt - .05, ...SPRINGS.heavy);
+      text('Productname', L.cx, L.cy - 20 * u, 150 * u * (.9 + .1 * s), { alpha: clamp(s * 1.5) });
+      text('try it at product.app', L.cx, L.cy + 90 * u, 38 * u, { font: F.ui, weight: 600, color: C.accent, alpha: seg(lt, .5, .8) });
+  }},
+];
+
+async function draw(t) {
+  const i = SHOTS.findIndex(s => t >= s.from && t < s.to), s = SHOTS[i === -1 ? SHOTS.length - 1 : i];
+  if (s.load) await s.load(t - s.from);                          // fetch sequence frames BEFORE painting anything
+  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+  s.draw(t - s.from, t, s.to - s.from);
+  // Transition: a quick accent wipe across every seam (replace per story: match cut, cut on action, whip, iris)
+  for (const n of SHOTS.slice(1)) { const k = seg(t, n.from - .18, n.from + .18); if (k > 0 && k < 1) { g.fillStyle = C.accent; const x = easeInOut(k) * (W * 2) - W; g.fillRect(x, 0, W, H); } }
+}
+window.seek = async t => { await window.ready; await draw(t); };
+
+// ---- Live preview (off during render): plays, click pauses, arrows step a frame, shift+arrows a second
+if (!Q.has('render')) {
+  let t = 0, playing = true, last = performance.now();
+  addEventListener('click', () => playing = !playing);
+  addEventListener('keydown', e => { const d = e.shiftKey ? 1 : 1 / FILM.fps; if (e.key === 'ArrowRight') t += d; if (e.key === 'ArrowLeft') t -= d; t = loopT(t, FILM.dur); playing = false; });
+  window.ready.then(function loop(now = performance.now()) { if (playing) t = loopT(t + (now - last) / 1000, FILM.dur); last = now; draw(t); document.title = t.toFixed(2); requestAnimationFrame(loop); });
+}
+</script></body></html>

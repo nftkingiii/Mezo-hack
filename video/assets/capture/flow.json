@@ -1,0 +1,28 @@
+{
+ "fps": 30,
+ "frames": 435,
+ "width": 1920,
+ "height": 1080,
+ "marks": [
+  {
+   "name": "position",
+   "t": 1.509
+  },
+  {
+   "name": "reserve",
+   "t": 4.09
+  },
+  {
+   "name": "rescue",
+   "t": 6.633
+  },
+  {
+   "name": "log",
+   "t": 9.676
+  },
+  {
+   "name": "back",
+   "t": 12.707
+  }
+ ]
+}
